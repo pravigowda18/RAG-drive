@@ -1,0 +1,13 @@
+langchain
+langchain-google-community
+langchain-google-genai
+langchain-pinecone 
+pinecone-client
+fastapi[all]
+uvicorn
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+PyPDF2
+langchain_huggingface
+sentence-transformers
