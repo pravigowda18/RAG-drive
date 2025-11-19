@@ -4,6 +4,7 @@ import os
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 # LangChain Imports
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -25,30 +26,21 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
 PINECONE_INDEX_NAME = "rag-chat"
 
-# --- 2. Initialize Services ---
-
-# Initialize Gemini LLM
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
 
-# Initialize Gemini Embeddings
-# embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GOOGLE_API_KEY)
 embeddings = HuggingFaceEmbeddings(
         model_name='sentence-transformers/all-MiniLM-L6-v2'
     )
 
-# Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Connect to the existing Pinecone index as a Vector Store
 vectorstore = LangchainPinecone.from_existing_index(
     index_name=PINECONE_INDEX_NAME,
     embedding=embeddings
 )
 
-# Create a retriever from the vector store
 retriever = vectorstore.as_retriever()
 
-# --- 3. Define Prompt Template ---
 template = """
 You are a helpful assistant. Answer the user's question based ONLY on the 
 following context. If the context doesn't contain the answer, 
@@ -64,7 +56,6 @@ Answer:
 """
 prompt = PromptTemplate.from_template(template)
 
-# --- 4. Build the RAG Chain ---
 rag_chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
@@ -74,11 +65,18 @@ rag_chain = (
 
 
 
-# --- 5. Initialize FastAPI App ---
 app = FastAPI(title="RAG Agent Backend")
 
 class ChatRequest(BaseModel):
     question: str
+    
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (for development only)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 @app.get("/")
 def read_root():
